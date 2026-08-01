@@ -1,0 +1,45 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual Environment
+venv/
+.env
+
+# Django
+*.sqlite3
+
+# =========================
+# Node / Next.js
+# =========================
+node_modules/
+.next/
+out/
+
+# =========================
+# Environment Variables
+# =========================
+.env.local
+.env.development.local
+.env.production.local
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# Operating System
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs
+# =========================
+*.log
