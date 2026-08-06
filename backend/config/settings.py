@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'api',
     'apps.finance',
     'apps.markets',
-    
+    'apps.analysis',
+    'apps.backtesting',
 ]
 
 MIDDLEWARE = [
