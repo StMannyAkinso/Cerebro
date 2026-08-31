@@ -2,6 +2,7 @@ import pandas as pd
 
 from apps.markets.models import Market, MarketPrice
 
+from .decision import TradingDecision
 from .experiments.base import Experiment
 
 
@@ -76,10 +77,18 @@ class AnalysisService:
         # Strategy
         strategy = experiment.build_strategy()
 
-        strategy_result = strategy.evaluate(observations)
+        strategy_result = strategy.evaluate(
+            observations
+        )
+
+        # Trading decision
+        decision = TradingDecision(
+            strategy_result
+        ).build()
 
         return {
             "experiment": experiment.name,
             "observations": observations,
             "strategy": strategy_result,
+            "decision": decision,
         }
