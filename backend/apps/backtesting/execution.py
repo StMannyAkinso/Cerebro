@@ -19,12 +19,14 @@ class BacktestExecutor:
         history = TradeHistory()
         results = []
         trades = []
+        trade_diagnostics = []
 
         if len(candles) <= 200:
             return {
                 "results": results,
                 "trades": trades,
-                "statistics": None,
+                "trade_diagnostics": trade_diagnostics,
+                "history": history,
             }
 
         index = 200
@@ -35,8 +37,9 @@ class BacktestExecutor:
 
             # Historical warmup period.
             #
-            # Indicators need historical candles, but trades
-            # must not be generated before start_date.
+            # Indicators need historical candles,
+            # but trades must not be generated before
+            # start_date.
             if (
                 start_date is not None
                 and candle.datetime < start_date
@@ -72,6 +75,37 @@ class BacktestExecutor:
                 history.add(simulation)
                 trades.append(simulation)
 
+                # -------------------------------------------------
+                # TRADE DIAGNOSTICS
+                #
+                # Preserve the decision that created the trade.
+                # This is what we eventually want to show to a
+                # human trader.
+                # -------------------------------------------------
+
+                decision = analysis.get("decision", {})
+
+                trade_diagnostics.append({
+                    "signal": simulation.signal,
+                    "entry_date": simulation.entry_date,
+                    "exit_date": simulation.exit_date,
+                    "entry_price": simulation.entry_price,
+                    "exit_price": simulation.exit_price,
+                    "stop_loss": simulation.stop_loss,
+                    "take_profit": simulation.take_profit,
+                    "result": simulation.result,
+                    "exit_reason": simulation.exit_reason,
+                    "candles_held": simulation.candles_held,
+                    "r_multiple": simulation.r_multiple,
+
+                    # Decision information.
+                    "decision": decision,
+
+                    # Useful flattened fields.
+                    "confidence": decision.get("confidence"),
+                    "reasons": decision.get("reasons", []),
+                })
+
                 results.append({
                     "date": candle.datetime,
                     "experiment": experiment.name,
@@ -89,7 +123,7 @@ class BacktestExecutor:
                 if simulation.exit_date is None:
 
                     # Trade remained open until the end of
-                    # the available data.
+                    # available data.
                     break
 
                 exit_index = None
@@ -98,7 +132,6 @@ class BacktestExecutor:
                     index + 1,
                     len(candles),
                 ):
-
                     if (
                         candles[future_index].datetime
                         == simulation.exit_date
@@ -119,7 +152,9 @@ class BacktestExecutor:
 
                 continue
 
-            # No trade on this candle.
+            # -----------------------------------------------------
+            # NO TRADE ON THIS CANDLE
+            # -----------------------------------------------------
 
             results.append({
                 "date": candle.datetime,
@@ -133,5 +168,6 @@ class BacktestExecutor:
         return {
             "results": results,
             "trades": trades,
+            "trade_diagnostics": trade_diagnostics,
             "history": history,
         }

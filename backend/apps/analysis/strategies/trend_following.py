@@ -27,55 +27,131 @@ class TrendFollowingStrategy(Strategy):
 
         price = observations["ema"]["values"]["price"]
 
-        bullish_setup = (
-            trend["direction"] == "Bullish"
-            and trend["bullish_pullback"]
-            and price_action["bullish_close"]
-            and 55 <= rsi <= 70
+        direction = trend["direction"]
+
+        bullish_pullback = trend.get(
+            "bullish_pullback",
+            False,
         )
 
-        bearish_setup = (
-            trend["direction"] == "Bearish"
-            and trend["bearish_pullback"]
-            and price_action["bearish_close"]
-            and 30 <= rsi <= 45
+        bearish_pullback = trend.get(
+            "bearish_pullback",
+            False,
         )
 
-        if bullish_setup:
+        bullish_close = price_action.get(
+            "bullish_close",
+            False,
+        )
 
-            signal = "BUY"
-            confidence = 80
+        bearish_close = price_action.get(
+            "bearish_close",
+            False,
+        )
 
-            reasons.extend([
-                "Bullish trend pullback",
-                "Strong bullish price action",
-                "RSI confirms bullish momentum",
-            ])
+        bullish_reversal = price_action.get(
+            "bullish_reversal",
+            False,
+        )
 
-            if price_action["bullish_reversal"]:
+        bearish_reversal = price_action.get(
+            "bearish_reversal",
+            False,
+        )
+
+        bullish_candle = price_action.get(
+            "bullish_candle",
+            False,
+        )
+
+        bearish_candle = price_action.get(
+            "bearish_candle",
+            False,
+        )
+
+        # --------------------------------------------------
+        # BULLISH SETUP
+        # --------------------------------------------------
+
+        if direction == "Bullish" and bullish_pullback:
+
+            confidence += 40
+            reasons.append("Bullish trend pullback")
+
+            if bullish_close:
+                confidence += 20
+                reasons.append("Strong bullish close")
+
+            elif bullish_candle:
                 confidence += 10
+                reasons.append("Bullish candle")
+
+            if bullish_reversal:
+                confidence += 15
                 reasons.append("Bullish reversal pattern")
 
-        elif bearish_setup:
+            if 55 <= rsi <= 70:
+                confidence += 20
+                reasons.append("RSI confirms bullish momentum")
 
-            signal = "SELL"
-            confidence = 80
-
-            reasons.extend([
-                "Bearish trend pullback",
-                "Strong bearish price action",
-                "RSI confirms bearish momentum",
-            ])
-
-            if price_action["bearish_reversal"]:
+            elif 50 <= rsi < 55:
                 confidence += 10
+                reasons.append("RSI supports bullish momentum")
+
+            if confidence >= 70:
+                signal = "BUY"
+
+            else:
+                signal = "HOLD"
+
+        # --------------------------------------------------
+        # BEARISH SETUP
+        # --------------------------------------------------
+
+        elif direction == "Bearish" and bearish_pullback:
+
+            confidence += 40
+            reasons.append("Bearish trend pullback")
+
+            if bearish_close:
+                confidence += 20
+                reasons.append("Strong bearish close")
+
+            elif bearish_candle:
+                confidence += 10
+                reasons.append("Bearish candle")
+
+            if bearish_reversal:
+                confidence += 15
                 reasons.append("Bearish reversal pattern")
+
+            if 30 <= rsi <= 45:
+                confidence += 20
+                reasons.append("RSI confirms bearish momentum")
+
+            elif 45 < rsi <= 50:
+                confidence += 10
+                reasons.append("RSI supports bearish momentum")
+
+            if confidence >= 70:
+                signal = "SELL"
+
+            else:
+                signal = "HOLD"
+
+        # --------------------------------------------------
+        # NO SETUP
+        # --------------------------------------------------
 
         else:
 
             signal = "HOLD"
             confidence = 0
             reasons.append("No complete trading setup")
+
+        # --------------------------------------------------
+        # RISK MANAGEMENT
+        # --------------------------------------------------
 
         entry = None
         stop_loss = None

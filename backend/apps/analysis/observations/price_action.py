@@ -7,68 +7,61 @@ class PriceActionObservation(Observation):
 
     def calculate(self, df):
 
-        if len(df) < 2:
-            return {
-                "values": {},
-                "observations": {
-                    "bullish_reversal": False,
-                    "bearish_reversal": False,
-                    "bullish_close": False,
-                    "bearish_close": False,
-                },
-            }
-
         previous = df.iloc[-2]
         current = df.iloc[-1]
 
-        previous_bearish = previous["close"] < previous["open"]
-        previous_bullish = previous["close"] > previous["open"]
+        previous_open = float(previous["open"])
+        previous_close = float(previous["close"])
 
-        current_bullish = current["close"] > current["open"]
-        current_bearish = current["close"] < current["open"]
+        current_open = float(current["open"])
+        current_high = float(current["high"])
+        current_low = float(current["low"])
+        current_close = float(current["close"])
 
-        bullish_engulfing = (
-            previous_bearish
-            and current_bullish
-            and current["open"] <= previous["close"]
-            and current["close"] >= previous["open"]
-        )
-
-        bearish_engulfing = (
-            previous_bullish
-            and current_bearish
-            and current["open"] >= previous["close"]
-            and current["close"] <= previous["open"]
-        )
-
-        current_range = current["high"] - current["low"]
+        current_range = current_high - current_low
 
         if current_range > 0:
-
             close_position = (
-                current["close"] - current["low"]
+                current_close - current_low
             ) / current_range
-
         else:
             close_position = 0.5
 
-        bullish_close = close_position >= 0.70
-        bearish_close = close_position <= 0.30
+        bullish_candle = current_close > current_open
+        bearish_candle = current_close < current_open
+
+        bullish_reversal = (
+            previous_close < previous_open
+            and current_close > current_open
+            and current_close > previous_open
+        )
+
+        bearish_reversal = (
+            previous_close > previous_open
+            and current_close < current_open
+            and current_close < previous_open
+        )
+
+        bullish_close = close_position >= 0.65
+        bearish_close = close_position <= 0.35
 
         return {
             "values": {
-                "previous_open": round(float(previous["open"]), 5),
-                "previous_close": round(float(previous["close"]), 5),
-                "current_open": round(float(current["open"]), 5),
-                "current_high": round(float(current["high"]), 5),
-                "current_low": round(float(current["low"]), 5),
-                "current_close": round(float(current["close"]), 5),
-                "close_position": round(float(close_position), 3),
+                "previous_open": round(previous_open, 5),
+                "previous_close": round(previous_close, 5),
+                "current_open": round(current_open, 5),
+                "current_high": round(current_high, 5),
+                "current_low": round(current_low, 5),
+                "current_close": round(current_close, 5),
+                "close_position": round(close_position, 5),
             },
+
             "observations": {
-                "bullish_reversal": bool(bullish_engulfing),
-                "bearish_reversal": bool(bearish_engulfing),
-                "bullish_close": bool(bullish_close),
-                "bearish_close": bool(bearish_close),
+                "bullish_reversal": bullish_reversal,
+                "bearish_reversal": bearish_reversal,
+                "bullish_candle": bullish_candle,
+                "bearish_candle": bearish_candle,
+                "bullish_close": bullish_close,
+                "bearish_close": bearish_close,
             },
         }
