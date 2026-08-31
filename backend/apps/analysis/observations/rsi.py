@@ -7,19 +7,26 @@ class RSIObservation(Observation):
 
     name = "rsi"
 
+    def __init__(self, window=14):
+
+        self.window = window
+
     def calculate(self, df):
 
+        close = df["close"]
+
         rsi = RSIIndicator(
-            close=df["close"],
-            window=14,
+            close,
+            window=self.window,
         ).rsi().iloc[-1]
 
         return {
             "values": {
-                "rsi14": round(float(rsi), 5),
+                "rsi": round(float(rsi), 5),
             },
+
             "observations": {
-                "overbought": bool(rsi > 70),
-                "oversold": bool(rsi < 30),
+                "overbought": bool(rsi >= 70),
+                "oversold": bool(rsi <= 30),
             },
         }

@@ -1,4 +1,31 @@
-from .trade import TradeResult
+from dataclasses import dataclass
+from datetime import datetime
+
+
+@dataclass
+class TradeResult:
+
+    signal: str
+
+    entry_date: datetime
+
+    exit_date: datetime | None
+
+    entry_price: float
+
+    exit_price: float | None
+
+    stop_loss: float
+
+    take_profit: float
+
+    result: str
+
+    exit_reason: str | None
+
+    candles_held: int
+
+    r_multiple: float
 
 
 class TradeSimulator:
@@ -14,6 +41,14 @@ class TradeSimulator:
 
         if signal == "HOLD":
             return None
+
+        # Calculate the actual amount risked per trade.
+        risk = abs(entry - stop_loss)
+
+        if risk == 0:
+            raise ValueError(
+                "Stop loss cannot be equal to entry price."
+            )
 
         for index, candle in enumerate(future_candles):
 
@@ -40,6 +75,10 @@ class TradeSimulator:
                     )
 
                 if high >= take_profit:
+
+                    reward = take_profit - entry
+                    r_multiple = reward / risk
+
                     return TradeResult(
                         signal=signal,
                         entry_date=future_candles[0].datetime,
@@ -51,7 +90,7 @@ class TradeSimulator:
                         result="WIN",
                         exit_reason="TAKE_PROFIT",
                         candles_held=index + 1,
-                        r_multiple=2.0,
+                        r_multiple=r_multiple,
                     )
 
             elif signal == "SELL":
@@ -74,6 +113,10 @@ class TradeSimulator:
                     )
 
                 if low <= take_profit:
+
+                    reward = entry - take_profit
+                    r_multiple = reward / risk
+
                     return TradeResult(
                         signal=signal,
                         entry_date=future_candles[0].datetime,
@@ -85,7 +128,7 @@ class TradeSimulator:
                         result="WIN",
                         exit_reason="TAKE_PROFIT",
                         candles_held=index + 1,
-                        r_multiple=2.0,
+                        r_multiple=r_multiple,
                     )
 
         return TradeResult(

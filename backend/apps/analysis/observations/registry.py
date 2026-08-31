@@ -1,15 +1,28 @@
-class HypothesisRegistry:
+class ObservationRegistry:
 
     def __init__(self):
-        self._hypotheses = []
+        self._observations = {}
 
-    def register(self, hypothesis):
-        self._hypotheses.append(hypothesis)
+    def register(self, observation_class):
+        name = observation_class.name
+
+        if not name:
+            raise ValueError(
+                "Observation class must define a name."
+            )
+
+        if name in self._observations:
+            raise ValueError(
+                f"Observation '{name}' is already registered."
+            )
+
+        self._observations[name] = observation_class
+
+    def get(self, name):
+        return self._observations[name]
 
     def all(self):
-        return self._hypotheses
+        return self._observations.copy()
 
 
-registry.register(
-    EMAHypothesis()
-)
+registry = ObservationRegistry()

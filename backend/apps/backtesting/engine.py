@@ -1,55 +1,90 @@
-from apps.analysis.services import AnalysisService
+from apps.analysis.decision import TradingDecision
+from apps.backtesting.execution import BacktestExecutor
+from apps.backtesting.statistics import Statistics
 from apps.markets.models import Market, MarketPrice
-
-from .history import TradeHistory
-from .simulator import TradeSimulator
-from .statistics import Statistics
 
 
 class BacktestEngine:
 
     def __init__(self):
 
-        self.analysis = AnalysisService()
-        self.simulator = TradeSimulator()
+        self.executor = BacktestExecutor()
         self.statistics = Statistics()
 
-    def run(self, symbol):
+    def run(
+        self,
+        symbol,
+        experiment,
+        start_date=None,
+        end_date=None,
+    ):
 
-        market = Market.objects.get(symbol=symbol)
+        market = Market.objects.get(
+            symbol=symbol
+        )
 
-        candles = list(
+        queryset = (
             MarketPrice.objects
             .filter(market=market)
             .order_by("datetime")
         )
 
-        history = TradeHistory()
-
-        for index in range(200, len(candles) - 1):
-
-            candle = candles[index]
-
-            analysis = self.analysis.analyse(
-                symbol,
-                end_date=candle.datetime,
+        if end_date is not None:
+            queryset = queryset.filter(
+                datetime__lte=end_date
             )
 
-            strategy = analysis["strategy"]
+        candles = list(queryset)
 
-            trade = self.simulator.simulate(
-                signal=strategy["signal"],
-                entry=strategy["entry"],
-                stop_loss=strategy["stop_loss"],
-                take_profit=strategy["take_profit"],
-                future_candles=candles[index + 1:],
+        execution = self.executor.execute(
+            symbol=symbol,
+            experiment=experiment,
+            candles=candles,
+            start_date=start_date,
+        )
+
+        results = execution["results"]
+
+        for result in results:
+
+            strategy_result = (
+                result["analysis"]["strategy"]
             )
 
-            history.add(trade)
+            result["analysis"]["decision"] = (
+                TradingDecision(
+                    strategy_result
+                ).build()
+            )
 
-        statistics = self.statistics.calculate(history)
+        history = execution.get("history")
+
+        if history is None:
+
+            return {
+                "experiment": experiment.name,
+                "parameters": experiment.parameters,
+                "results": results,
+                "trades": execution["trades"],
+                "statistics": {
+                    "trades": 0,
+                    "wins": 0,
+                    "losses": 0,
+                    "open": 0,
+                    "win_rate": 0,
+                    "average_r": 0,
+                    "average_candles": 0,
+                },
+            }
+
+        statistics = self.statistics.calculate(
+            history
+        )
 
         return {
+            "experiment": experiment.name,
+            "parameters": experiment.parameters,
+            "results": results,
+            "trades": execution["trades"],
             "statistics": statistics,
-            "history": history,
         }
